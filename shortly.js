@@ -2,6 +2,9 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var session = require('express-session');
+// var cookieParser = require('cookie-parser');
+// var cookieSession = require('cookie-session');
 
 
 var db = require('./app/config');
@@ -10,6 +13,7 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+
 
 var app = express();
 
@@ -21,10 +25,25 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+app.use(session( {
+  secret: 'justin is blocked',
+  cookie: {maxAge: 60000}
+}));
 
 
-app.get('/', 
+var restrict = function(req, res, next) {
+  if(req.session.user) {
+    next();
+  } else {
+    req.session.error = "Access Denied!"
+    console.log(req.session, ' inside redirect')
+    res.redirect('/login')
+  }
+};
+
+app.get('/', restrict, 
 function(req, res) {
+  console.log('im inside /', req.session)
   res.render('index');
 });
 
@@ -72,10 +91,57 @@ function(req, res) {
   });
 });
 
+
+app.get('/login',
+function(req, res) {
+  res.render('login');
+});
+
+app.get('/signup', function(req, res){
+  res.render('signup');
+});
+
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
 
+app.post('/login', function(req, res) {
+  let loginInfo = req.body.username;
+  let loginPassword = req.body.password;
+
+  new User({username: loginInfo, password: loginPassword}).fetch().then(function(found){
+    if(found) {
+      req.session.regenerate(function() {
+      req.session.user = loginInfo;
+      console.log('im found!', req.session)
+      res.status(200).redirect('/');
+      })
+    } else {
+      console.log('im not found!')
+    }
+  });
+})
+
+
+app.post('/signup', function(req, res){
+  let usernam = req.body.username;
+  let psswrd = req.body.password;
+
+  new User({username: usernam, password: psswrd}).fetch().then(function(found){
+    if(found) {
+      // res.status(200).redirect('/login');
+      res.jsonp(usernam + ' is taken');
+    } else {
+      Users.create({
+        username: usernam,
+        password: psswrd
+      }).then(function(usernam) {
+        req.session.user = usernam;
+        res.status(201).redirect('/login');
+      })
+    }
+  })
+});
 
 
 /************************************************************/
