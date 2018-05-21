@@ -32,72 +32,70 @@ app.use(session( {
 
 
 var restrict = function(req, res, next) {
-  if(req.session.user) {
+  if (req.session.user) {
     next();
   } else {
-    req.session.error = "Access Denied!"
-    console.log(req.session, ' inside redirect')
-    res.redirect('/login')
+    req.session.error = 'Access Denied!';
+    res.redirect('/login');
   }
 };
 
 app.get('/', restrict, 
-function(req, res) {
-  console.log('im inside /', req.session)
-  res.render('index');
-});
-
-app.get('/create', 
-function(req, res) {
-  res.render('index');
-});
-
-app.get('/links', 
-function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.status(200).send(links.models);
+  function(req, res) {
+    res.render('index');
   });
-});
+
+app.get('/create', restrict, 
+  function(req, res) {
+    res.render('index');
+  });
+
+app.get('/links', restrict,
+  function(req, res) {
+    Links.reset().fetch().then(function(links) {
+      res.status(200).send(links.models);
+    });
+  });
 
 app.post('/links', 
-function(req, res) {
-  var uri = req.body.url;
+  function(req, res) {
+    var uri = req.body.url;
 
-  if (!util.isValidUrl(uri)) {
-    console.log('Not a valid url: ', uri);
-    return res.sendStatus(404);
-  }
-
-  new Link({ url: uri }).fetch().then(function(found) {
-    if (found) {
-      res.status(200).send(found.attributes);
-    } else {
-      util.getUrlTitle(uri, function(err, title) {
-        if (err) {
-          console.log('Error reading URL heading: ', err);
-          return res.sendStatus(404);
-        }
-
-        Links.create({
-          url: uri,
-          title: title,
-          baseUrl: req.headers.origin
-        })
-        .then(function(newLink) {
-          res.status(200).send(newLink);
-        });
-      });
+    if (!util.isValidUrl(uri)) {
+      console.log('Not a valid url: ', uri);
+      return res.sendStatus(404);
     }
+
+    new Link({ url: uri }).fetch().then(function(found) {
+      if (found) {
+        res.status(200).send(found.attributes);
+      } else {
+        util.getUrlTitle(uri, function(err, title) {
+          if (err) {
+            console.log('Error reading URL heading: ', err);
+            return res.sendStatus(404);
+          }
+
+          Links.create({
+            url: uri,
+            title: title,
+            baseUrl: req.headers.origin
+          })
+            .then(function(newLink) {
+              res.status(200).send(newLink);
+            });
+        });
+      }
+    });
   });
-});
 
 
 app.get('/login',
-function(req, res) {
-  res.render('login');
-});
+  function(req, res) {
+    res.render('login');
+  });
 
-app.get('/signup', function(req, res){
+app.get('/signup', function(req, res) {
   res.render('signup');
 });
 
@@ -109,26 +107,27 @@ app.post('/login', function(req, res) {
   let loginInfo = req.body.username;
   let loginPassword = req.body.password;
 
-  new User({username: loginInfo, password: loginPassword}).fetch().then(function(found){
-    if(found) {
+  new User( {username: loginInfo, password: loginPassword}).fetch().then(function(found) {
+    if (found) {
       req.session.regenerate(function() {
-      req.session.user = loginInfo;
-      console.log('im found!', req.session)
-      res.status(200).redirect('/');
-      })
+        req.session.user = loginInfo;
+        // console.log('im found!', req.session);
+        res.status(200).redirect('/');
+      });
     } else {
-      console.log('im not found!')
+      console.log('im not found!');
+      res.status(200).redirect('/login');
     }
   });
-})
+});
 
 
-app.post('/signup', function(req, res){
+app.post('/signup', function(req, res) {
   let usernam = req.body.username;
   let psswrd = req.body.password;
 
-  new User({username: usernam, password: psswrd}).fetch().then(function(found){
-    if(found) {
+  new User({username: usernam, password: psswrd}).fetch().then(function(found) {
+    if (found) {
       // res.status(200).redirect('/login');
       res.jsonp(usernam + ' is taken');
     } else {
@@ -137,10 +136,10 @@ app.post('/signup', function(req, res){
         password: psswrd
       }).then(function(usernam) {
         req.session.user = usernam;
-        res.status(201).redirect('/login');
-      })
+        res.status(201).redirect('/');
+      });
     }
-  })
+  });//
 });
 
 
