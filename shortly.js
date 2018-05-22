@@ -105,24 +105,23 @@ app.get('/signup', function(req, res) {
 app.post('/login', function(req, res) {
   let loginInfo = req.body.username;
   let loginPassword = req.body.password;
-  console.log('loginpw', loginPassword)
   new User( {username: loginInfo}).fetch().then(function(found) {
-      if (found) {
-        bcrypt.compare(loginPassword, found.attributes.password, function(err, result) {
-          if (err) throw err;
-          else if(result) {
-            req.session.regenerate(function() {
+    if (found) {
+      bcrypt.compare(loginPassword, found.attributes.password, function(err, result) {
+        if (err) { 
+          throw err;
+        } else if (result) {
+          req.session.regenerate(function() {
             req.session.user = loginInfo;
             res.status(200).redirect('/');
-            });
-          } else {
-            console.log('im not found!');
-            res.status(200).redirect('/login');
-          }
-        });
-      };
-    });
-  })
+          });
+        } else {
+          res.status(200).redirect('/login');
+        }
+      });
+    }
+  });
+});
 
 
 
@@ -131,22 +130,21 @@ app.post('/signup', function(req, res) {
   let psswrd = req.body.password;
 
   bcrypt.hash(psswrd, null, null, function(err, hash) {
-     new User({username: usernam, password: hash}).fetch().then(function(found) {
-       console.log('hash pw', hash);
-    if (found) {
-      // res.status(200).redirect('/login');
-      res.jsonp(usernam + ' is taken');
-    } else {
-      Users.create({
-        username: usernam,
-        password: hash
-      }).then(function(usernam) {
-        req.session.user = usernam;
-        res.status(201).redirect('/');
-      });
-    }
-  })
-  });//
+    new User({username: usernam, password: hash}).fetch().then(function(found) {
+      if (found) {
+        // res.status(200).redirect('/login');
+        res.json(usernam + ' is taken');
+      } else {
+        Users.create({
+          username: usernam,
+          password: hash
+        }).then(function(usernam) {
+          req.session.user = usernam;
+          res.status(201).redirect('/');
+        });
+      }
+    });
+  });
 });
 
 
