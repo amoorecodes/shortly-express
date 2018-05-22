@@ -3,8 +3,7 @@ var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var session = require('express-session');
-// var cookieParser = require('cookie-parser');
-// var cookieSession = require('cookie-session');
+var bcrypt = require('bcrypt-nodejs');
 
 
 var db = require('./app/config');
@@ -106,39 +105,47 @@ app.get('/signup', function(req, res) {
 app.post('/login', function(req, res) {
   let loginInfo = req.body.username;
   let loginPassword = req.body.password;
+  console.log('loginpw', loginPassword)
+  new User( {username: loginInfo}).fetch().then(function(found) {
+      if (found) {
+        bcrypt.compare(loginPassword, found.attributes.password, function(err, result) {
+          if (err) throw err;
+          else if(result) {
+            req.session.regenerate(function() {
+            req.session.user = loginInfo;
+            res.status(200).redirect('/');
+            });
+          } else {
+            console.log('im not found!');
+            res.status(200).redirect('/login');
+          }
+        });
+      };
+    });
+  })
 
-  new User( {username: loginInfo, password: loginPassword}).fetch().then(function(found) {
-    if (found) {
-      req.session.regenerate(function() {
-        req.session.user = loginInfo;
-        // console.log('im found!', req.session);
-        res.status(200).redirect('/');
-      });
-    } else {
-      console.log('im not found!');
-      res.status(200).redirect('/login');
-    }
-  });
-});
 
 
 app.post('/signup', function(req, res) {
   let usernam = req.body.username;
   let psswrd = req.body.password;
 
-  new User({username: usernam, password: psswrd}).fetch().then(function(found) {
+  bcrypt.hash(psswrd, null, null, function(err, hash) {
+     new User({username: usernam, password: hash}).fetch().then(function(found) {
+       console.log('hash pw', hash);
     if (found) {
       // res.status(200).redirect('/login');
       res.jsonp(usernam + ' is taken');
     } else {
       Users.create({
         username: usernam,
-        password: psswrd
+        password: hash
       }).then(function(usernam) {
         req.session.user = usernam;
         res.status(201).redirect('/');
       });
     }
+  })
   });//
 });
 
